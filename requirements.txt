@@ -4,3 +4,5 @@ yfinance
 plotly
 python-dotenv
 schedule
+ccxt # Cryptocurrency Trading Library
+finance-datareader # Financial Data Reader for Python
