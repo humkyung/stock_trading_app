@@ -5,7 +5,6 @@ from datetime import datetime
 import requests
 import re  # 정규표현식 모듈 추가
 import pandas as pd
-import os
 
 # -----------------------------------------------------------
 # 한국 주식 데이터 로딩 및 검색 (FinanceDataReader)
@@ -170,80 +169,7 @@ def render_sidebar():
     
     st.sidebar.info(f"선택된 티커: **{selected_ticker}**")
 
-    st.sidebar.markdown("---")
-
-    # =========================================================
-    # 관심 종목 관리 섹션
-    # ========================================================= 
-    st.sidebar.subheader("📌 관심 종목 목록")
-
-    WATCHLIST_FILE = "watchlist.csv" # 저장할 파일명
-    
-    # 초기화 및 파일 로딩 (세션에 없을 때만 실행)
-    if 'watchlist' not in st.session_state:
-        if os.path.exists(WATCHLIST_FILE):
-            # 파일이 있으면 불러오기
-            try:
-                df = pd.read_csv(WATCHLIST_FILE)
-                # 'ticker' 컬럼을 리스트로 변환
-                st.session_state['watchlist'] = df['ticker'].tolist()
-            except Exception as e:
-                st.error(f"파일 로딩 실패: {e}")
-                st.session_state['watchlist'] = []
-        else:
-            # 파일이 없으면 빈 리스트로 초기화
-            st.session_state['watchlist'] = []
-    
-    # 저장 함수 정의 (리스트가 변경될 때마다 호출)
-    def save_watchlist():
-        try:
-            df = pd.DataFrame(st.session_state['watchlist'], columns=['ticker'])
-            df.to_csv(WATCHLIST_FILE, index=False)
-        except Exception as e:
-            st.error(f"저장 실패: {e}")
-
-    # 텍스트 입력 창에 현재 검색된 티커를 기본값으로 제공
-    # 'new_ticker_input'이라는 키로 텍스트 입력창이 관리됩니다.
-    # 검색 결과(selected_ticker)를 이 키의 값으로 직접 넣어주면
-    # 화면상의 입력창 값이 검색된 종목으로 자동 변경됩니다.
-    st.session_state['new_ticker_input'] = selected_ticker
-
-    new_ticker = st.sidebar.text_input(
-        "목록에 추가할 종목", 
-        value=selected_ticker.upper(), 
-        key="new_ticker_input"
-    )
-    
-    # [추가] 버튼 로직
-    if st.sidebar.button("➕ 관심 종목 등록"):
-        if new_ticker:
-            ticker_to_add = new_ticker.upper()
-            if ticker_to_add not in st.session_state['watchlist']:
-                st.session_state['watchlist'].append(ticker_to_add)
-                save_watchlist() # 파일에 즉시 저장
-                st.sidebar.success(f"{ticker_to_add} 등록 완료!")
-                st.rerun()
-            else:
-                st.sidebar.warning("이미 등록된 종목입니다.")
-
-    # 등록된 종목 목록 표시
-    if st.session_state['watchlist']:
-        st.sidebar.caption("현재 목록:")
-        # 리스트가 길어지면 스크롤이 생기도록 container 사용 가능 (선택사항)
-        cols = st.sidebar.columns([3, 1])
-        for i, item_ticker in enumerate(st.session_state['watchlist']):
-            cols = st.sidebar.columns([3, 1])
-            cols[0].write(f"- {item_ticker}")
-
-            # 제거 버튼 로직
-            if cols[1].button("❌", key=f"remove_{i}"):
-                st.session_state['watchlist'].remove(item_ticker)
-                save_watchlist()
-                st.rerun()
-
-    st.sidebar.markdown("---")
-
-    # 차트 기간 설정
+    # 2. 차트 기간 설정
     period = st.sidebar.selectbox(
         "데이터 기간", 
         ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"], 
@@ -252,7 +178,7 @@ def render_sidebar():
     
     st.sidebar.markdown("---")
     
-    # 자동 매매 조건 (목업)
+    # 3. 자동 매매 조건 (목업)
     st.sidebar.subheader("2. 자동 매매 조건")
     target_buy_price = st.sidebar.number_input("목표 매수가 ($)", min_value=0.0, value=0.0, step=1.0)
     target_sell_price = st.sidebar.number_input("목표 매도가 ($)", min_value=0.0, value=0.0, step=1.0)
@@ -271,6 +197,5 @@ def render_sidebar():
         "ticker": selected_ticker.upper(),
         "period": period,
         "run_btn": run_btn,
-        "is_auto": is_auto_trading,
-        "watchlist": st.session_state['watchlist']
+        "is_auto": is_auto_trading
     }
