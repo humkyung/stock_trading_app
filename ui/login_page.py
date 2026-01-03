@@ -46,13 +46,13 @@ def render_login_page(auth_manager):
         # Google 로그인 버튼
         try:
             google_url = auth_manager.get_google_auth_url()
-            st.markdown(f'<a href="{google_url}" class="login-btn google" target="_self">Google 계정으로 로그인</a>', unsafe_allow_html=True)
+            st.link_button("Google 계정으로 로그인", google_url)
         except Exception as e:
             st.error(f"Google 로그인 설정 오류: {e}")
         
         # Naver 로그인 버튼
         try:
             naver_url = auth_manager.get_naver_auth_url()
-            st.markdown(f'<a href="{naver_url}" class="login-btn naver" target="_self">Naver 계정으로 로그인</a>', unsafe_allow_html=True)
+            st.link_button("Naver 계정으로 로그인", naver_url)
         except Exception as e:
             st.error(f"네이버 로그인 설정 오류: {e}")
