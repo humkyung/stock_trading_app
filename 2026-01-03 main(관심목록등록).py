@@ -9,8 +9,6 @@ from modules.scraper import (
 )
 from ui.sidebar import render_sidebar
 from ui.dashboard import render_dashboard
-from modules.auth_manager import AuthManager # 추가
-from ui.login_page import render_login_page  # 추가
 
 # 페이지 기본 설정 (반드시 코드 최상단에 위치)
 st.set_page_config(
@@ -48,57 +46,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main():
-    # -----------------------------------------------------
-    # 로그인 세션 관리
-    # -----------------------------------------------------
-    if 'user_info' not in st.session_state:
-        st.session_state['user_info'] = None
-
-    auth_manager = AuthManager()
-
-    # URL 쿼리 파라미터 확인 (로그인 후 리다이렉트 되었을 때)
-    # Streamlit 최신 버전은 st.query_params 사용
-    query_params = st.query_params
-
-    # 로그인 처리 로직
-    if st.session_state['user_info'] is None:
-        # A. Google 로그인 콜백
-        if "code" in query_params and "state" not in query_params: # Google은 state 필수가 아님(설정 안했을 시)
-            code = query_params["code"]
-            user_info = auth_manager.authenticate_google(code)
-            if user_info:
-                st.session_state['user_info'] = user_info
-                st.query_params.clear() # URL 파라미터 청소
-                st.rerun() # 새로고침
-        
-        # B. Naver 로그인 콜백
-        elif "code" in query_params and "state" in query_params:
-            code = query_params["code"]
-            state = query_params["state"]
-            user_info = auth_manager.authenticate_naver(code, state)
-            if user_info:
-                st.session_state['user_info'] = user_info
-                st.query_params.clear()
-                st.rerun()
-        
-        # C. 로그인 화면 표시
-        render_login_page(auth_manager)
-        return # 메인 앱 실행 중단
-
-    # -----------------------------------------------------
-    # 메인 앱 실행 (로그인 성공 시)
-    # -----------------------------------------------------
-    user = st.session_state['user_info']
-
-    # 사이드바에 사용자 정보 표시
-    with st.sidebar:
-        st.write(f"👋 환영합니다, **{user.get('name', 'User')}**님!")
-        if st.button("로그아웃"):
-            st.session_state['user_info'] = None
-            st.rerun()
-        st.divider()
-
-    # 사이드바 렌더링 및 설정값 받아오기
+    # 1. 사이드바 렌더링 및 설정값 받아오기
     config = render_sidebar()
     ticker = config['ticker']
     period = config['period']
