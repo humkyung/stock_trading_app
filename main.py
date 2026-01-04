@@ -1,4 +1,8 @@
 # main.py
+import os
+import json
+from streamlit_cookies_manager import EncryptedCookieManager
+from streamlit.errors import StreamlitSecretNotFoundError
 import streamlit as st
 from modules.scraper import (
     StockScraper, 
@@ -9,10 +13,13 @@ from modules.scraper import (
 )
 from ui.sidebar import render_sidebar
 from ui.dashboard import render_dashboard
-from modules.auth_manager import AuthManager # 추가
-from ui.login_page import render_login_page  # 추가
+from modules.auth_manager import AuthManager
+from ui.login_page import render_login_page
+from dotenv import load_dotenv
 
-# 페이지 기본 설정 (반드시 코드 최상단에 위치)
+load_dotenv()
+
+# 페이지 기본 설정
 st.set_page_config(
     page_title="AutoTrade Pro",
     page_icon="📈",
@@ -48,11 +55,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main():
+    def get_secret(key: str, default=None):
+        try:
+            if key in st.secrets:
+                return st.secrets.get(key, default)
+        except StreamlitSecretNotFoundError:
+            pass
+
+        return os.getenv(key, default)
+
+    # --- 쿠키 매니저 (반드시 초반) ---
+    password = get_secret("COOKIES_PASSWORD")
+    if not password:
+        st.error("❌ COOKIES_PASSWORD가 설정되지 않았습니다. 관리자에게 문의하세요.")
+        st.stop()
+
+    cookies = EncryptedCookieManager(
+        prefix="stock-trading-app/",  # 앱 고유 prefix
+        password=password
+    )
+
+    if not cookies.ready():
+        st.stop()  # 쿠키 컴포넌트 준비될 때까지 대기
+
     # -----------------------------------------------------
     # 로그인 세션 관리
     # -----------------------------------------------------
     if 'user_info' not in st.session_state:
         st.session_state['user_info'] = None
+
+    # --- ✅ 새로고침(F5) 후에도 쿠키에서 로그인 복원 ---
+    if st.session_state['user_info'] is None and cookies.get("user_info"):
+        try:
+            st.session_state['user_info'] = json.loads(cookies["user_info"])
+        except Exception:
+            # 쿠키가 깨졌거나 형식이 이상하면 지움
+            del cookies["user_info"]
+            cookies.save()
 
     auth_manager = AuthManager()
 
@@ -68,6 +107,9 @@ def main():
             user_info = auth_manager.authenticate_google(code)
             if user_info:
                 st.session_state['user_info'] = user_info
+                # 쿠키에도 저장
+                cookies["user_info"] = json.dumps(user_info, ensure_ascii=False)
+                cookies.save()
                 st.query_params.clear() # URL 파라미터 청소
                 st.rerun() # 새로고침
         
@@ -78,6 +120,9 @@ def main():
             user_info = auth_manager.authenticate_naver(code, state)
             if user_info:
                 st.session_state['user_info'] = user_info
+                # 쿠키에도 저장
+                cookies["user_info"] = json.dumps(user_info, ensure_ascii=False)
+                cookies.save()
                 st.query_params.clear()
                 st.rerun()
         
@@ -95,6 +140,10 @@ def main():
         st.write(f"👋 환영합니다, **{user.get('name', 'User')}**님!")
         if st.button("로그아웃"):
             st.session_state['user_info'] = None
+            # 쿠키에서도 삭제
+            if cookies.get("user_info"):
+                del cookies["user_info"]
+                cookies.save()
             st.rerun()
         st.divider()
 

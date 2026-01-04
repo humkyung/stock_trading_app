@@ -6,3 +6,4 @@ python-dotenv
 schedule
 ccxt # Cryptocurrency Trading Library
 finance-datareader # Financial Data Reader for Python
+streamlit-cookies-manager-v2 # Cookie Management for Streamlit
