@@ -16,14 +16,32 @@ def get_krx_list():
     한국거래소(KRX) 상장 종목 전체 리스트를 가져와 캐싱합니다.
     서버 실행 시 최초 1회만 실행되므로 속도가 빠릅니다.
     """
+    # KRX 전체(코스피, 코스닥, 코넥스) 가져오기
     try:
-        # KRX 전체(코스피, 코스닥, 코넥스) 가져오기
         df = fdr.StockListing('KRX')
         # 필요한 컬럼만 추출 (Code, Name, Market)
         return df[['Code', 'Name', 'Market']]
     except Exception as e:
-        st.error(f"KRX 데이터 로딩 실패: {e}")
-        return pd.DataFrame()
+        st.warning(f"KRX Listing(FDR) 실패 → CSV 백업으로 폴백: {repr(e)}")
+
+        # ✅ 백업 CSV (커뮤니티에서 많이 쓰는 미러)
+        # 필요하면 이 URL을 네가 관리하는 파일/레포로 바꾸는 걸 추천
+        backup_url = "https://raw.githubusercontent.com/corazzon/finance-data-analysis/main/krx.csv"
+
+        try:
+            df = pd.read_csv(backup_url)
+            # 🔑 컬럼명 표준화 (Symbol → Code)
+            if "Symbol" in df.columns and "Code" not in df.columns:
+                df = df.rename(columns={"Symbol": "Code"})
+
+            # 백업 파일 컬럼명이 다를 수 있어서 방어적으로 처리
+            for col in ["Code", "Name", "Market"]:
+                if col not in df.columns:
+                    raise ValueError(f"백업 CSV에 {col} 컬럼이 없습니다. columns={df.columns.tolist()}")
+            return df[["Code", "Name", "Market"]]
+        except Exception as e2:
+            st.error(f"KRX CSV 폴백도 실패: {repr(e2)}")
+            return pd.DataFrame()
 
 def search_krx_market(query):
     """
