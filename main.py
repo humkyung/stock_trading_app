@@ -15,6 +15,7 @@ from ui.sidebar import render_sidebar
 from ui.dashboard import render_dashboard
 from modules.auth_manager import AuthManager
 from ui.login_page import render_login_page
+from modules.db import ensure_schema
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -146,6 +147,9 @@ def main():
                 cookies.save()
             st.rerun()
         st.divider()
+
+    # --- DB 스키마 보장 ---
+    ensure_schema()
 
     # 사이드바 렌더링 및 설정값 받아오기
     config = render_sidebar()

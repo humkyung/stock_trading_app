@@ -196,13 +196,31 @@ def render_sidebar():
     # ========================================================= 
     st.sidebar.subheader("📌 관심 종목 목록")
 
-    user = st.session_state.get("user_info")
-    user_id = user.get("id")  # 네이버면 id, 구글이면 sub 등으로 맞춰줘
+    WATCHLIST_FILE = "watchlist.csv" # 저장할 파일명
     
     # 초기화 및 파일 로딩 (세션에 없을 때만 실행)
     if 'watchlist' not in st.session_state:
-        st.session_state["watchlist"] = load_watchlist(user_id)
+        if os.path.exists(WATCHLIST_FILE):
+            # 파일이 있으면 불러오기
+            try:
+                df = pd.read_csv(WATCHLIST_FILE)
+                # 'ticker' 컬럼을 리스트로 변환
+                st.session_state['watchlist'] = df['ticker'].tolist()
+            except Exception as e:
+                st.error(f"파일 로딩 실패: {e}")
+                st.session_state['watchlist'] = []
+        else:
+            # 파일이 없으면 빈 리스트로 초기화
+            st.session_state['watchlist'] = []
     
+    # 저장 함수 정의 (리스트가 변경될 때마다 호출)
+    def save_watchlist():
+        try:
+            df = pd.DataFrame(st.session_state['watchlist'], columns=['ticker'])
+            df.to_csv(WATCHLIST_FILE, index=False)
+        except Exception as e:
+            st.error(f"저장 실패: {e}")
+
     # 텍스트 입력 창에 현재 검색된 티커를 기본값으로 제공
     # 'new_ticker_input'이라는 키로 텍스트 입력창이 관리됩니다.
     # 검색 결과(selected_ticker)를 이 키의 값으로 직접 넣어주면
@@ -220,8 +238,8 @@ def render_sidebar():
         if new_ticker:
             ticker_to_add = new_ticker.upper()
             if ticker_to_add not in st.session_state['watchlist']:
-                add_watchlist(user_id, new_ticker)
-                st.session_state["watchlist"] = load_watchlist(user_id)
+                st.session_state['watchlist'].append(ticker_to_add)
+                save_watchlist() # 파일에 즉시 저장
                 st.sidebar.success(f"{ticker_to_add} 등록 완료!")
                 st.rerun()
             else:
@@ -238,8 +256,8 @@ def render_sidebar():
 
             # 제거 버튼 로직
             if cols[1].button("❌", key=f"remove_{i}"):
-                remove_watchlist(user_id, item_ticker)
-                st.session_state["watchlist"] = load_watchlist(user_id)
+                st.session_state['watchlist'].remove(item_ticker)
+                save_watchlist()
                 st.rerun()
 
     st.sidebar.markdown("---")
