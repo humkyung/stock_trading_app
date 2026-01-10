@@ -44,7 +44,7 @@ class KisTrader:
         cached_token, issued_at = self._load_cached_token()
         if cached_token:
             self.access_token = cached_token
-            self.token_issued_at = issued_at
+            self.token_issued_at = issued_at  # issue 날짜 저장
             print("♻️ 캐시된 토큰 사용")
             return
 
@@ -159,13 +159,14 @@ class KisTrader:
             res = requests.get(url, headers=headers, params=params)
             data = res.json()
             if res.status_code == 200 and data["rt_cd"] == "0":
-                return data["output1"]  # 보유 종목 리스트
+                # output1: 보유 종목 리스트, output2: 계좌 총 자산 현황
+                return data["output1"], data["output2"]
             else:
                 print(f"잔고 조회 실패: {data.get('msg1')}")
-                return []
+                return [], []
         except Exception as e:
             print(f"잔고 조회 에러: {e}")
-            return []
+            return [], []
 
     def send_order(self, ticker, quantity, price, order_type="buy"):
         """
