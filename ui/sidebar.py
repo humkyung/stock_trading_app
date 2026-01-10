@@ -220,11 +220,13 @@ def render_sidebar():
     # 'new_ticker_input'이라는 키로 텍스트 입력창이 관리됩니다.
     # 검색 결과(selected_ticker)를 이 키의 값으로 직접 넣어주면
     # 화면상의 입력창 값이 검색된 종목으로 자동 변경됩니다.
-    st.session_state["new_ticker_input"] = selected_ticker
 
-    new_ticker = st.sidebar.text_input(
-        "목록에 추가할 종목", value=selected_ticker.upper(), key="new_ticker_input"
-    )
+    # 선택된 티커가 바뀌었을 때만 입력창을 자동 업데이트
+    if st.session_state.get("_last_selected_ticker") != selected_ticker.upper():
+        st.session_state["new_ticker_input"] = selected_ticker.upper()
+        st.session_state["_last_selected_ticker"] = selected_ticker.upper()
+
+    new_ticker = st.sidebar.text_input("목록에 추가할 종목", key="new_ticker_input")
 
     # [추가] 버튼 로직
     if st.sidebar.button("➕ 관심 종목 등록"):
