@@ -1,6 +1,6 @@
 # main.py
 import os
-import time
+import time, datetime
 import json
 from streamlit_cookies_manager import EncryptedCookieManager
 from streamlit.errors import StreamlitSecretNotFoundError
@@ -20,6 +20,7 @@ from modules.db import ensure_schema
 from modules.trader import KisTrader
 from modules.portfolio import PortfolioManager  # 추가됨
 from ui.portfolio_ui import render_portfolio_dashboard  # 추가됨
+from modules.pdf_generator import download_journal_pdf
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -189,8 +190,13 @@ def main():
     st.title("📈 AI Stock Trading Dashboard")
 
     # [탭 구성] 기능 분리 - 관심 목록 탭 추가
-    tab_analysis, tab_portfolio, tab_watchlist = st.tabs(
-        ["📊 종목 분석 & 자동매매", "💰 나의 포트폴리오", "📌 관심 종목 목록"]
+    tab_analysis, tab_portfolio, tab_journal, tab_watchlist = st.tabs(
+        [
+            "📊 종목 분석 & 자동매매",
+            "💰 나의 포트폴리오",
+            "📝 매매 일지",
+            "📌 관심 종목 목록",
+        ]
     )
 
     # -----------------------------------------------------
@@ -308,7 +314,32 @@ def main():
         pass
 
     # -----------------------------------------------------
-    # TAB 3: 관심 종목 목록
+    # TAB 3: 매매 일지
+    # -----------------------------------------------------
+    with tab_journal:
+        st.header("📝 매매 일지")
+
+        # 날짜 선택
+        selected_date = st.date_input("날짜 선택", value=datetime.date.today())
+
+        # 일지 내용 입력
+        journal_content = st.text_area(
+            "일지 내용 (Markdown 형식)",
+            placeholder="매매 후기, 분석 내용 등을 입력해주세요.",
+            height=200,
+        )
+
+        # 실제 매매 기록 (예시)
+        trades_data = None  # 실제 데이터는 여기에 들어가야 함
+
+        if st.button("일지 저장 및 PDF 생성"):
+            if journal_content.strip():
+                download_journal_pdf(selected_date, journal_content, trades_data)
+            else:
+                st.warning("일지를 입력해주세요.")
+
+    # -----------------------------------------------------
+    # TAB 4: 관심 종목 목록
     # -----------------------------------------------------
     with tab_watchlist:
         st.header("📌 내 관심 종목 현황")
