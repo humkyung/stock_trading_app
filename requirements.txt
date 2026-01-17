@@ -7,7 +7,7 @@ schedule
 ccxt # Cryptocurrency Trading Library
 finance-datareader # Financial Data Reader for Python
 streamlit-cookies-manager-v2 # Cookie Management for Streamlit
-streamlit-calendar # Calendar widget for Streamlit
+streamlit-calendar #
 psycopg[binary] # PostgreSQL database adapter for Python
 markdown # Markdown parsing library
 pdfkit # PDF generation library

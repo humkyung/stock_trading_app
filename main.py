@@ -327,92 +327,29 @@ def main():
             st.session_state["journal_selected_date"] = datetime.date.today()
 
         #  DB에서 작성된 일지 목록 가져오기 (이벤트로 표시)
-        saved_dates = get_journal_dates(user_id)
+        selected_date = st.date_input("날짜 선택", value=datetime.date.today())
 
-        # 캘린더에 표시할 이벤트 리스트 생성
-        calendar_events = []
-        for d in saved_dates:
-            calendar_events.append(
-                {
-                    "title": "✅ 작성됨",
-                    "start": d.strftime("%Y-%m-%d"),
-                    "color": "#28a745",  # 녹색 표시
-                    "allDay": True,
-                }
-            )
+        # DB에서 내용 불러오기
+        # 선택한 날짜가 변경될 때마다 DB에서 데이터를 새로 가져옵니다.
+        current_content = load_journal(user_id, selected_date)
 
-        # 3. 캘린더 UI 설정
-        calendar_options = {
-            "headerToolbar": {
-                "left": "prev,next today",
-                "center": "title",
-                "right": "dayGridMonth",
-            },
-            "initialView": "dayGridMonth",
-            "selectable": True,  # 날짜 선택 가능
-            "height": 600,  # [필수] 높이 설정 추가 (이 부분이 없으면 안 보일 수 있음)
-        }
+        # 일지 내용 입력
+        journal_content = st.text_area(
+            "일지 내용 (Markdown 형식)",
+            value=current_content,
+            placeholder="매매 후기, 분석 내용 등을 입력해주세요.",
+            height=200,
+        )
 
-        # 캘린더 렌더링
-        col_cal, col_editor = st.columns(
-            [6, 4], gap="medium"
-        )  # 캘린더와 에디터 비율 조절
-        with col_cal:
-            custom_css = """
-            .fc {
-                height: 600px !important; 
-            }
-            .fc-event-past { opacity: 0.8; }
-            .fc-event-time { display: none; }
-            .fc-event-title { font-weight: 700; }
-            .fc-toolbar-title { font-size: 1.2rem; }
-            """
+        # 실제 매매 기록 (예시)
+        trades_data = None  # 실제 데이터는 여기에 들어가야 함
 
-            # 캘린더 출력 및 클릭 이벤트 수신
-            cal_response = calendar(
-                events=calendar_events,
-                options=calendar_options,
-                custom_css=custom_css,
-                key="journal_calendar",
-            )
-
-            # [핵심] 날짜 클릭 시 세션 상태 업데이트
-            if cal_response.get("callback") == "dateClick":
-                clicked_date_str = cal_response["dateClick"]["date"]
-                # [수정] 데이터에 시간('T' 이후)이 포함되어 있다면 제거
-                # 예: "2025-01-01T15:00:00.000Z" -> "2025-01-01"
-                clean_date_str = clicked_date_str.split("T")[0]
-                st.session_state["journal_selected_date"] = datetime.datetime.strptime(
-                    clean_date_str, "%Y-%m-%d"
-                ).date()
-                # 클릭 즉시 반영을 위해 리런 (선택사항, 자연스러운 UX를 위해 추천)
-                st.rerun()
-
-        with col_editor:
-            # 선택된 날짜의 일지 작성 에디터
-            selected_date = st.session_state["journal_selected_date"]
-
-            # DB에서 내용 불러오기
-            # 선택한 날짜가 변경될 때마다 DB에서 데이터를 새로 가져옵니다.
-            current_content = load_journal(user_id, selected_date)
-
-            # 일지 내용 입력
-            journal_content = st.text_area(
-                "일지 내용 (Markdown 형식)",
-                value=current_content,
-                placeholder="매매 후기, 분석 내용 등을 입력해주세요.",
-                height=200,
-            )
-
-            # 실제 매매 기록 (예시)
-            trades_data = None  # 실제 데이터는 여기에 들어가야 함
-
-            if st.button("일지 저장 및 PDF 생성", width="stretch"):
-                if journal_content.strip():
-                    save_journal(user_id, selected_date, journal_content)
-                    download_journal_pdf(selected_date, journal_content, trades_data)
-                else:
-                    st.warning("일지를 입력해주세요.")
+        if st.button("일지 저장 및 PDF 생성", width="stretch"):
+            if journal_content.strip():
+                save_journal(user_id, selected_date, journal_content)
+                download_journal_pdf(selected_date, journal_content, trades_data)
+            else:
+                st.warning("일지를 입력해주세요.")
 
         pass
 
