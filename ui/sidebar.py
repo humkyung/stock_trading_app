@@ -7,6 +7,7 @@ import re  # 정규표현식 모듈 추가
 import pandas as pd
 import os
 from modules.db import load_watchlist, add_watchlist, remove_watchlist
+from modules.scraper import fetch_stock_info
 
 
 # -----------------------------------------------------------
@@ -26,7 +27,7 @@ def get_krx_list():
     except Exception as e:
         st.warning(f"KRX Listing(FDR) 실패 → CSV 백업으로 폴백: {repr(e)}")
 
-        # ✅ 백업 CSV (커뮤니티에서 많이 쓰는 미러)
+        # 백업 CSV (커뮤니티에서 많이 쓰는 미러)
         # 필요하면 이 URL을 네가 관리하는 파일/레포로 바꾸는 걸 추천
         backup_url = "https://raw.githubusercontent.com/corazzon/finance-data-analysis/main/krx.csv"
 
@@ -233,7 +234,9 @@ def render_sidebar():
         if new_ticker:
             ticker_to_add = new_ticker.upper()
             if ticker_to_add not in st.session_state["watchlist"]:
-                add_watchlist(user_id, new_ticker)
+                # 종목 정보 가져오기
+                info = fetch_stock_info(new_ticker)
+                add_watchlist(user_id, new_ticker, info["name"])
                 st.session_state["watchlist"] = load_watchlist(user_id)
                 st.sidebar.success(f"{ticker_to_add} 등록 완료!")
                 st.rerun()
@@ -244,14 +247,15 @@ def render_sidebar():
     if st.session_state["watchlist"]:
         st.sidebar.caption("현재 목록:")
         # 리스트가 길어지면 스크롤이 생기도록 container 사용 가능 (선택사항)
-        cols = st.sidebar.columns([3, 1])
-        for i, item_ticker in enumerate(st.session_state["watchlist"]):
+        for item in st.session_state["watchlist"]:
+            ticker = item["ticker"]
+            name = item["name"]
             cols = st.sidebar.columns([3, 1])
-            cols[0].write(f"- {item_ticker}")
+            cols[0].write(f"- {ticker} ({name})")
 
             # 제거 버튼 로직
-            if cols[1].button("❌", key=f"remove_{i}"):
-                remove_watchlist(user_id, item_ticker)
+            if cols[1].button("❌", key=f"remove_{ticker}"):
+                remove_watchlist(user_id, ticker)
                 st.session_state["watchlist"] = load_watchlist(user_id)
                 st.rerun()
 
