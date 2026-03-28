@@ -5,6 +5,7 @@ import os
 import re
 from typing import Optional, Tuple
 
+import markdown
 import streamlit as st
 from fpdf import FPDF
 
@@ -82,8 +83,6 @@ def create_journal_pdf_bytes(
         pdf.ln(4)
 
         # 본문 (Markdown → plain text)
-        import markdown
-
         html_content = markdown.markdown(
             content or "",
             extensions=["fenced_code", "tables", "nl2br"],

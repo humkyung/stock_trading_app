@@ -174,6 +174,22 @@ class KisTrader:
             price: 가격 (0이면 시장가)
             order_type: 'buy' (매수) or 'sell' (매도)
         """
+        # 입력값 검증
+        if not ticker or not isinstance(ticker, str):
+            print("❌ 유효하지 않은 종목코드")
+            return False
+        ticker = ticker.strip()
+        if not isinstance(quantity, (int, float)) or quantity <= 0:
+            print("❌ 수량은 양수여야 합니다")
+            return False
+        quantity = int(quantity)
+        if price < 0:
+            print("❌ 가격은 0 이상이어야 합니다")
+            return False
+        if order_type not in ("buy", "sell"):
+            print("❌ order_type은 'buy' 또는 'sell'이어야 합니다")
+            return False
+
         url = f"{self.base_url}/uapi/domestic-stock/v1/trading/order-cash"
 
         # TR ID 설정 (매수/매도 구분)
