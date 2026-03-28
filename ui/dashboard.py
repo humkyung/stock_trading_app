@@ -2,9 +2,12 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
-def render_dashboard(df, basic_info, news_list):
+from modules.dart import ticker_to_corp_code, search_disclosures
+
+
+def render_dashboard(df, basic_info, news_list, ticker=None):
     """
     수집된 데이터를 기반으로 메인 대시보드를 그립니다.
     """
@@ -59,8 +62,8 @@ def render_dashboard(df, basic_info, news_list):
     else:
         st.warning("차트 데이터를 불러올 수 없습니다.")
 
-    # 3. 하단 탭 (뉴스, 상세정보, 거래로그)
-    tab1, tab2, tab3 = st.tabs(["📰 최신 뉴스", "ℹ️ 기업 개요", "📝 매매 로그"])
+    # 3. 하단 탭 (뉴스, 상세정보, 공시, 거래로그)
+    tab1, tab2, tab3, tab4 = st.tabs(["📰 최신 뉴스", "ℹ️ 기업 개요", "📋 공시", "📝 매매 로그"])
     
     with tab1:
         if news_list:
@@ -98,6 +101,9 @@ def render_dashboard(df, basic_info, news_list):
         st.write(basic_info.get('summary', '기업 개요 정보가 없습니다.'))
         
     with tab3:
+        _render_disclosure_tab(ticker)
+
+    with tab4:
         st.write("자동 매매 기록이 이곳에 표시됩니다. (기능 구현 예정)")
         # 예시 데이터프레임
         dummy_log = pd.DataFrame({
@@ -107,3 +113,62 @@ def render_dashboard(df, basic_info, news_list):
             "수량": [10, 10]
         })
         st.dataframe(dummy_log, use_container_width=True)
+
+
+def _render_disclosure_tab(ticker):
+    """OpenDART 공시 검색 탭을 렌더링합니다."""
+    if not ticker:
+        st.info("종목을 선택하면 공시 정보를 조회할 수 있습니다.")
+        return
+
+    corp_code, corp_name = ticker_to_corp_code(ticker)
+    if not corp_code:
+        st.info("한국 상장 종목만 공시 검색이 가능합니다.")
+        return
+
+    st.caption(f"DART 기업코드: {corp_code} ({corp_name})")
+
+    # 날짜 범위 선택
+    col1, col2 = st.columns(2)
+    with col1:
+        bgn_date = st.date_input(
+            "시작일",
+            value=datetime.now() - timedelta(days=90),
+            key="dart_bgn_date",
+        )
+    with col2:
+        end_date = st.date_input(
+            "종료일",
+            value=datetime.now(),
+            key="dart_end_date",
+        )
+
+    bgn_de = bgn_date.strftime("%Y%m%d")
+    end_de = end_date.strftime("%Y%m%d")
+
+    disclosures = search_disclosures(corp_code, bgn_de, end_de, page_count=50)
+
+    if not disclosures:
+        st.info("해당 기간에 공시 내역이 없습니다.")
+        return
+
+    st.caption(f"총 {len(disclosures)}건의 공시")
+
+    for item in disclosures:
+        rcept_no = item.get("rcept_no", "")
+        report_nm = item.get("report_nm", "제목 없음")
+        rcept_dt = item.get("rcept_dt", "")
+        flr_nm = item.get("flr_nm", "")
+
+        # 날짜 포맷팅
+        if len(rcept_dt) == 8:
+            date_display = f"{rcept_dt[:4]}-{rcept_dt[4:6]}-{rcept_dt[6:]}"
+        else:
+            date_display = rcept_dt
+
+        dart_url = f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rcept_no}"
+        st.markdown(
+            f"**[{report_nm}]({dart_url})**  \n"
+            f"`{date_display}` · {flr_nm}"
+        )
+        st.divider()
