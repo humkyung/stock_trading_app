@@ -3,15 +3,12 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta
-import streamlit as st
-from dotenv import load_dotenv
+
+from modules.config import get_secret
 
 TOKEN_FILE = "token.json"
 TOKEN_SAFETY_MIN = 5  # 만료 5분 전이면 갱신
 TOKEN_EXPIRE_HOURS = 23  # 24시간보다 조금 짧게
-
-# .env 파일 로드
-load_dotenv()
 
 
 class KisTrader:
@@ -20,11 +17,11 @@ class KisTrader:
     """
 
     def __init__(self):
-        self.mode = os.getenv("KIS_MODE", "VIRTUAL")
-        self.app_key = os.getenv("KIS_APP_KEY")
-        self.app_secret = os.getenv("KIS_APP_SECRET")
-        self.account_no = os.getenv("KIS_ACCOUNT_NO")  # 계좌번호 앞 8자리
-        self.account_code = os.getenv("KIS_ACCOUNT_CODE", "01")  # 계좌번호 뒤 2자리
+        self.mode = get_secret("KIS_MODE", "VIRTUAL")
+        self.app_key = get_secret("KIS_APP_KEY")
+        self.app_secret = get_secret("KIS_APP_SECRET")
+        self.account_no = get_secret("KIS_ACCOUNT_NO")  # 계좌번호 앞 8자리
+        self.account_code = get_secret("KIS_ACCOUNT_CODE", "01")  # 계좌번호 뒤 2자리
 
         # 모의투자 vs 실전투자 URL 설정
         if self.mode == "PROD":

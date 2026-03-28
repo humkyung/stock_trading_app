@@ -1,10 +1,12 @@
 # main.py
-import os
-import time, datetime
+import time
+import datetime
 import json
-from streamlit_cookies_manager import EncryptedCookieManager
-from streamlit.errors import StreamlitSecretNotFoundError
+
 import streamlit as st
+from streamlit_cookies_manager import EncryptedCookieManager
+
+from modules.config import get_secret
 from modules.scraper import (
     StockScraper,
     fetch_stock_history,
@@ -12,19 +14,15 @@ from modules.scraper import (
     fetch_watchlist_data,
     WATCHLIST_UPDATE_SEC,
 )
-from ui.sidebar import render_sidebar
-from ui.dashboard import render_dashboard
 from modules.auth_manager import AuthManager
-from ui.login_page import render_login_page
-from streamlit_calendar import calendar
 from modules.db import ensure_schema, get_journal_dates, save_journal, load_journal
 from modules.trader import KisTrader
-from modules.portfolio import PortfolioManager  # 추가됨
-from ui.portfolio_ui import render_portfolio_dashboard  # 추가됨
+from modules.portfolio import PortfolioManager
 from modules.pdf_generator import download_journal_pdf
-from dotenv import load_dotenv
-
-load_dotenv()
+from ui.sidebar import render_sidebar
+from ui.dashboard import render_dashboard
+from ui.login_page import render_login_page
+from ui.portfolio_ui import render_portfolio_dashboard
 
 # 페이지 기본 설정
 st.set_page_config(
@@ -77,15 +75,6 @@ if "bought_status" not in st.session_state:
 
 
 def main():
-    def get_secret(key: str, default=None):
-        try:
-            if key in st.secrets:
-                return st.secrets.get(key, default)
-        except StreamlitSecretNotFoundError:
-            pass
-
-        return os.getenv(key, default)
-
     # --- 쿠키 매니저 (반드시 초반) ---
     password = get_secret("COOKIES_PASSWORD")
     if not password:

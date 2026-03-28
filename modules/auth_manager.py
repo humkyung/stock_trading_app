@@ -1,28 +1,14 @@
-#modules/auth_manager.py 
-import os
+# modules/auth_manager.py
 import requests
 import urllib.parse
 import streamlit as st
-from dotenv import load_dotenv
 import secrets
-from streamlit.errors import StreamlitSecretNotFoundError
+
+from modules.config import get_secret
+
 
 class AuthManager:
     def __init__(self):
-        # 로컬 .env 로딩 (Streamlit Cloud에서는 보통 영향 없음)
-        load_dotenv()
-
-        # Streamlit Cloud에서는 st.secrets가 정석
-        def get_secret(key: str):
-            # 1) Streamlit secrets가 존재하는 환경(Cloud 등)에서는 secrets 우선
-            try:
-                if hasattr(st, "secrets") and key in st.secrets:
-                    return st.secrets[key]
-            except StreamlitSecretNotFoundError:
-                # secrets.toml 자체가 없는 로컬 환경이면 여기로 떨어짐
-                pass
-            return os.getenv(key)
-
         # Google 설정
         self.google_client_id = get_secret("GOOGLE_CLIENT_ID")
         self.google_client_secret = get_secret("GOOGLE_CLIENT_SECRET")
