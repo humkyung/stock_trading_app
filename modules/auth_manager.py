@@ -5,6 +5,7 @@ import streamlit as st
 import secrets
 
 from modules.config import get_secret
+from modules.constants import SK_NAVER_OAUTH_STATE
 
 
 class AuthManager:
@@ -52,7 +53,7 @@ class AuthManager:
 
         # state를 랜덤 생성 + 세션에 저장(콜백에서 검증)
         state = secrets.token_urlsafe(16)
-        st.session_state["naver_oauth_state"] = state
+        st.session_state[SK_NAVER_OAUTH_STATE] = state
 
         params = {
             "client_id": self.naver_client_id,
@@ -92,7 +93,7 @@ class AuthManager:
     def authenticate_naver(self, code, state):
         """Naver 인증 코드로 사용자 정보 가져오기"""
         # state 검증(권장)
-        expected = st.session_state.get("naver_oauth_state")
+        expected = st.session_state.get(SK_NAVER_OAUTH_STATE)
         if expected and state != expected:
             return None
 

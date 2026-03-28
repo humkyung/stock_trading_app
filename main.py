@@ -7,6 +7,12 @@ import streamlit as st
 from streamlit_cookies_manager import EncryptedCookieManager
 
 from modules.config import get_secret
+from modules.constants import (
+    SK_USER_INFO,
+    SK_BOUGHT_STATUS,
+    SK_WATCHLIST,
+    SK_JOURNAL_DATE,
+)
 from modules.scraper import (
     StockScraper,
     fetch_stock_history,
@@ -71,7 +77,7 @@ def get_trader():
 
 # 2. 세션 상태 초기화 (중복 주문 방지용)
 if "bought_status" not in st.session_state:
-    st.session_state["bought_status"] = {}  # {ticker: True/False}
+    st.session_state[SK_BOUGHT_STATUS] = {}  # {ticker: True/False}
 
 
 def main():
@@ -92,15 +98,15 @@ def main():
     # 로그인 세션 관리
     # -----------------------------------------------------
     if "user_info" not in st.session_state:
-        st.session_state["user_info"] = None
+        st.session_state[SK_USER_INFO] = None
 
     # --- 새로고침(F5) 후에도 쿠키에서 로그인 복원 ---
-    if st.session_state["user_info"] is None and cookies.get("user_info"):
+    if st.session_state[SK_USER_INFO] is None and cookies.get(SK_USER_INFO):
         try:
-            st.session_state["user_info"] = json.loads(cookies["user_info"])
+            st.session_state[SK_USER_INFO] = json.loads(cookies[SK_USER_INFO])
         except Exception:
             # 쿠키가 깨졌거나 형식이 이상하면 지움
-            del cookies["user_info"]
+            del cookies[SK_USER_INFO]
             cookies.save()
 
     auth_manager = AuthManager()
@@ -110,7 +116,7 @@ def main():
     query_params = st.query_params
 
     # 로그인 처리 로직
-    if st.session_state["user_info"] is None:
+    if st.session_state[SK_USER_INFO] is None:
         # A. Google 로그인 콜백
         if (
             "code" in query_params and "state" not in query_params
@@ -118,9 +124,9 @@ def main():
             code = query_params["code"]
             user_info = auth_manager.authenticate_google(code)
             if user_info:
-                st.session_state["user_info"] = user_info
+                st.session_state[SK_USER_INFO] = user_info
                 # 쿠키에도 저장
-                cookies["user_info"] = json.dumps(user_info, ensure_ascii=False)
+                cookies[SK_USER_INFO] = json.dumps(user_info, ensure_ascii=False)
                 cookies.save()
                 st.query_params.clear()  # URL 파라미터 청소
                 st.rerun()  # 새로고침
@@ -131,9 +137,9 @@ def main():
             state = query_params["state"]
             user_info = auth_manager.authenticate_naver(code, state)
             if user_info:
-                st.session_state["user_info"] = user_info
+                st.session_state[SK_USER_INFO] = user_info
                 # 쿠키에도 저장
-                cookies["user_info"] = json.dumps(user_info, ensure_ascii=False)
+                cookies[SK_USER_INFO] = json.dumps(user_info, ensure_ascii=False)
                 cookies.save()
                 st.query_params.clear()
                 st.rerun()
@@ -145,16 +151,16 @@ def main():
     # -----------------------------------------------------
     # 메인 앱 실행 (로그인 성공 시)
     # -----------------------------------------------------
-    user = st.session_state["user_info"]
+    user = st.session_state[SK_USER_INFO]
 
     # 사이드바에 사용자 정보 표시
     with st.sidebar:
         st.write(f"👋 환영합니다, **{user.get('name', 'User')}**님!")
         if st.button("로그아웃"):
-            st.session_state["user_info"] = None
+            st.session_state[SK_USER_INFO] = None
             # 쿠키에서도 삭제
-            if cookies.get("user_info"):
-                del cookies["user_info"]
+            if cookies.get(SK_USER_INFO):
+                del cookies[SK_USER_INFO]
                 cookies.save()
             st.rerun()
         st.divider()
@@ -174,7 +180,7 @@ def main():
     target_sell = st.session_state.get("target_sell", 0)
 
     # session_state에서 직접 가져옴
-    watchlist = st.session_state.get("watchlist", [])
+    watchlist = st.session_state.get(SK_WATCHLIST, [])
 
     user_id = user.get("id")
 
@@ -237,7 +243,7 @@ def main():
                 # 2. 현재가가 목표가보다 낮거나 같으며
                 # 3. 아직 매수하지 않은 상태일 때
                 if config["target_buy"] > 0 and current_price <= config["target_buy"]:
-                    if not st.session_state["bought_status"].get(ticker, False):
+                    if not st.session_state[SK_BOUGHT_STATUS].get(ticker, False):
                         log_container.warning(
                             f"⚡ 매수 조건 충족! ({current_price} <= {config['target_buy']}) 주문 실행 중..."
                         )
@@ -246,7 +252,7 @@ def main():
                         success = trader.send_order(ticker, 1, 0, "buy")
 
                         if success:
-                            st.session_state["bought_status"][ticker] = True
+                            st.session_state[SK_BOUGHT_STATUS][ticker] = True
                             st.success(f"✅ {ticker} 1주 매수 완료!")
                             time.sleep(1)  # 메시지 확인용 대기
                         else:
@@ -258,7 +264,7 @@ def main():
                 elif (
                     config["target_sell"] > 0 and current_price >= config["target_sell"]
                 ):
-                    if st.session_state["bought_status"].get(ticker, False):
+                    if st.session_state[SK_BOUGHT_STATUS].get(ticker, False):
                         log_container.warning(
                             f"⚡ 매도 조건 충족! ({current_price} >= {config['target_sell']}) 주문 실행 중..."
                         )
@@ -266,7 +272,7 @@ def main():
                         success = trader.send_order(ticker, 1, 0, "sell")
 
                         if success:
-                            st.session_state["bought_status"][
+                            st.session_state[SK_BOUGHT_STATUS][
                                 ticker
                             ] = False  # 매도했으므로 상태 초기화
                             st.success(f"✅ {ticker} 1주 매도 완료!")
@@ -312,8 +318,8 @@ def main():
         st.header("📝 매매 일지")
 
         # 세션 상태 초기화 (선택된 날짜 관리)
-        if "journal_selected_date" not in st.session_state:
-            st.session_state["journal_selected_date"] = datetime.date.today()
+        if SK_JOURNAL_DATE not in st.session_state:
+            st.session_state[SK_JOURNAL_DATE] = datetime.date.today()
 
         #  DB에서 작성된 일지 목록 가져오기 (이벤트로 표시)
         selected_date = st.date_input("날짜 선택", value=datetime.date.today())

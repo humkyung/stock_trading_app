@@ -8,6 +8,12 @@ import pandas as pd
 import os
 from modules.db import load_watchlist, add_watchlist, remove_watchlist
 from modules.scraper import fetch_stock_info
+from modules.constants import (
+    SK_USER_INFO,
+    SK_WATCHLIST,
+    SK_NEW_TICKER_INPUT,
+    SK_LAST_SELECTED_TICKER,
+)
 
 
 # -----------------------------------------------------------
@@ -210,12 +216,12 @@ def render_sidebar():
     # =========================================================
     st.sidebar.subheader("📌 관심 종목 목록")
 
-    user = st.session_state.get("user_info")
+    user = st.session_state.get(SK_USER_INFO)
     user_id = user.get("id")  # 네이버면 id, 구글이면 sub 등으로 맞춰줘
 
     # 초기화 및 파일 로딩 (세션에 없을 때만 실행)
     if "watchlist" not in st.session_state:
-        st.session_state["watchlist"] = load_watchlist(user_id)
+        st.session_state[SK_WATCHLIST] = load_watchlist(user_id)
 
     # 텍스트 입력 창에 현재 검색된 티커를 기본값으로 제공
     # 'new_ticker_input'이라는 키로 텍스트 입력창이 관리됩니다.
@@ -223,31 +229,31 @@ def render_sidebar():
     # 화면상의 입력창 값이 검색된 종목으로 자동 변경됩니다.
 
     # 선택된 티커가 바뀌었을 때만 입력창을 자동 업데이트
-    if st.session_state.get("_last_selected_ticker") != selected_ticker.upper():
-        st.session_state["new_ticker_input"] = selected_ticker.upper()
-        st.session_state["_last_selected_ticker"] = selected_ticker.upper()
+    if st.session_state.get(SK_LAST_SELECTED_TICKER) != selected_ticker.upper():
+        st.session_state[SK_NEW_TICKER_INPUT] = selected_ticker.upper()
+        st.session_state[SK_LAST_SELECTED_TICKER] = selected_ticker.upper()
 
-    new_ticker = st.sidebar.text_input("목록에 추가할 종목", key="new_ticker_input")
+    new_ticker = st.sidebar.text_input("목록에 추가할 종목", key=SK_NEW_TICKER_INPUT)
 
     # [추가] 버튼 로직
     if st.sidebar.button("➕ 관심 종목 등록"):
         if new_ticker:
             ticker_to_add = new_ticker.upper()
-            if ticker_to_add not in st.session_state["watchlist"]:
+            if ticker_to_add not in st.session_state[SK_WATCHLIST]:
                 # 종목 정보 가져오기
                 info = fetch_stock_info(new_ticker)
                 add_watchlist(user_id, new_ticker, info["name"])
-                st.session_state["watchlist"] = load_watchlist(user_id)
+                st.session_state[SK_WATCHLIST] = load_watchlist(user_id)
                 st.sidebar.success(f"{ticker_to_add} 등록 완료!")
                 st.rerun()
             else:
                 st.sidebar.warning("이미 등록된 종목입니다.")
 
     # 등록된 종목 목록 표시
-    if st.session_state["watchlist"]:
+    if st.session_state[SK_WATCHLIST]:
         st.sidebar.caption("현재 목록:")
         # 리스트가 길어지면 스크롤이 생기도록 container 사용 가능 (선택사항)
-        for item in st.session_state["watchlist"]:
+        for item in st.session_state[SK_WATCHLIST]:
             ticker = item["ticker"]
             name = item["name"]
             cols = st.sidebar.columns([3, 1])
@@ -256,7 +262,7 @@ def render_sidebar():
             # 제거 버튼 로직
             if cols[1].button("❌", key=f"remove_{ticker}"):
                 remove_watchlist(user_id, ticker)
-                st.session_state["watchlist"] = load_watchlist(user_id)
+                st.session_state[SK_WATCHLIST] = load_watchlist(user_id)
                 st.rerun()
 
     st.sidebar.markdown("---")
@@ -294,5 +300,5 @@ def render_sidebar():
         "is_auto": is_auto_trading,
         "target_buy": target_buy_price,  # 추가됨
         "target_sell": target_sell_price,  # 추가됨
-        "watchlist": st.session_state["watchlist"],
+        "watchlist": st.session_state[SK_WATCHLIST],
     }
