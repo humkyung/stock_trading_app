@@ -1,4 +1,3 @@
-wkhtmltopdf
 fonts-noto-cjk
 fonts-nanum
 fontconfig
