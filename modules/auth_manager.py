@@ -1,28 +1,15 @@
-#modules/auth_manager.py 
-import os
+# modules/auth_manager.py
 import requests
 import urllib.parse
 import streamlit as st
-from dotenv import load_dotenv
 import secrets
-from streamlit.errors import StreamlitSecretNotFoundError
+
+from modules.config import get_secret
+from modules.constants import SK_NAVER_OAUTH_STATE
+
 
 class AuthManager:
     def __init__(self):
-        # 로컬 .env 로딩 (Streamlit Cloud에서는 보통 영향 없음)
-        load_dotenv()
-
-        # Streamlit Cloud에서는 st.secrets가 정석
-        def get_secret(key: str):
-            # 1) Streamlit secrets가 존재하는 환경(Cloud 등)에서는 secrets 우선
-            try:
-                if hasattr(st, "secrets") and key in st.secrets:
-                    return st.secrets[key]
-            except StreamlitSecretNotFoundError:
-                # secrets.toml 자체가 없는 로컬 환경이면 여기로 떨어짐
-                pass
-            return os.getenv(key)
-
         # Google 설정
         self.google_client_id = get_secret("GOOGLE_CLIENT_ID")
         self.google_client_secret = get_secret("GOOGLE_CLIENT_SECRET")
@@ -66,7 +53,7 @@ class AuthManager:
 
         # state를 랜덤 생성 + 세션에 저장(콜백에서 검증)
         state = secrets.token_urlsafe(16)
-        st.session_state["naver_oauth_state"] = state
+        st.session_state[SK_NAVER_OAUTH_STATE] = state
 
         params = {
             "client_id": self.naver_client_id,
@@ -106,7 +93,7 @@ class AuthManager:
     def authenticate_naver(self, code, state):
         """Naver 인증 코드로 사용자 정보 가져오기"""
         # state 검증(권장)
-        expected = st.session_state.get("naver_oauth_state")
+        expected = st.session_state.get(SK_NAVER_OAUTH_STATE)
         if expected and state != expected:
             return None
 

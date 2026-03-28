@@ -74,7 +74,7 @@ def render_dashboard(df, basic_info, news_list):
                              # 썸네일 해상도 문제는 있을 수 있음
                             try:
                                 st.image(news['thumbnail']['resolutions'][0]['url']) 
-                            except:
+                            except Exception:
                                 st.write("No Image")
                     with col_news_2:
                         raw_date = news.get('published')
@@ -87,7 +87,7 @@ def render_dashboard(df, basic_info, news_list):
                                 try:
                                     date_obj = datetime.fromisoformat(raw_date)
                                     date_str = date_obj.strftime('%Y-%m-%d %H:%M')
-                                except:
+                                except Exception:
                                     date_str = raw_date  # 포맷 변환 실패 시 원본 사용
                         st.caption(f"출처: {news['publisher']} | {date_str}")
                     st.divider()

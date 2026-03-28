@@ -1,21 +1,7 @@
 # modules/db.py
-import os
-import streamlit as st
 import psycopg
-from streamlit.errors import StreamlitSecretNotFoundError
-from dotenv import load_dotenv
 
-load_dotenv()
-
-
-def get_secret(key: str, default=None):
-    try:
-        if key in st.secrets:
-            return st.secrets.get(key, default)
-    except StreamlitSecretNotFoundError:
-        pass
-
-    return os.getenv(key, default)
+from modules.config import get_secret
 
 
 def get_conn():

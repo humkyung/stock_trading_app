@@ -3,15 +3,12 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta
-import streamlit as st
-from dotenv import load_dotenv
+
+from modules.config import get_secret
 
 TOKEN_FILE = "token.json"
 TOKEN_SAFETY_MIN = 5  # 만료 5분 전이면 갱신
 TOKEN_EXPIRE_HOURS = 23  # 24시간보다 조금 짧게
-
-# .env 파일 로드
-load_dotenv()
 
 
 class KisTrader:
@@ -20,11 +17,11 @@ class KisTrader:
     """
 
     def __init__(self):
-        self.mode = os.getenv("KIS_MODE", "VIRTUAL")
-        self.app_key = os.getenv("KIS_APP_KEY")
-        self.app_secret = os.getenv("KIS_APP_SECRET")
-        self.account_no = os.getenv("KIS_ACCOUNT_NO")  # 계좌번호 앞 8자리
-        self.account_code = os.getenv("KIS_ACCOUNT_CODE", "01")  # 계좌번호 뒤 2자리
+        self.mode = get_secret("KIS_MODE", "VIRTUAL")
+        self.app_key = get_secret("KIS_APP_KEY")
+        self.app_secret = get_secret("KIS_APP_SECRET")
+        self.account_no = get_secret("KIS_ACCOUNT_NO")  # 계좌번호 앞 8자리
+        self.account_code = get_secret("KIS_ACCOUNT_CODE", "01")  # 계좌번호 뒤 2자리
 
         # 모의투자 vs 실전투자 URL 설정
         if self.mode == "PROD":
@@ -177,6 +174,22 @@ class KisTrader:
             price: 가격 (0이면 시장가)
             order_type: 'buy' (매수) or 'sell' (매도)
         """
+        # 입력값 검증
+        if not ticker or not isinstance(ticker, str):
+            print("❌ 유효하지 않은 종목코드")
+            return False
+        ticker = ticker.strip()
+        if not isinstance(quantity, (int, float)) or quantity <= 0:
+            print("❌ 수량은 양수여야 합니다")
+            return False
+        quantity = int(quantity)
+        if price < 0:
+            print("❌ 가격은 0 이상이어야 합니다")
+            return False
+        if order_type not in ("buy", "sell"):
+            print("❌ order_type은 'buy' 또는 'sell'이어야 합니다")
+            return False
+
         url = f"{self.base_url}/uapi/domestic-stock/v1/trading/order-cash"
 
         # TR ID 설정 (매수/매도 구분)

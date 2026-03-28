@@ -20,7 +20,7 @@ class StockScraper:
         try:
             # fast_info가 응답 속도가 더 빠릅니다.
             return self.stock.fast_info["last_price"]
-        except:
+        except Exception:
             # fast_info 실패 시 일반 info에서 시도
             data = self.stock.history(period="1d")
             if not data.empty:
