@@ -9,3 +9,4 @@ streamlit-calendar #
 psycopg[binary] # PostgreSQL database adapter for Python
 markdown # Markdown parsing library
 fpdf2 # PDF generation library (pure Python, no system deps)
+pandas_ta # Technical analysis indicators

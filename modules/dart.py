@@ -115,3 +115,40 @@ def search_disclosures(corp_code: str, bgn_de: str = None, end_de: str = None, p
     except Exception as e:
         print(f"DART 공시 검색 실패: {e}")
         return []
+
+
+def get_financial_statement(corp_code: str, bsns_year: str, reprt_code: str, fs_div: str = "CFS"):
+    """
+    DART 재무제표 API 호출.
+    Args:
+        corp_code: 8자리 DART 기업 고유코드
+        bsns_year: 사업연도 (YYYY)
+        reprt_code: 11013(1Q), 11012(반기), 11014(3Q), 11011(사업보고서)
+        fs_div: CFS(연결) / OFS(개별)
+    Returns: list[dict] - 재무제표 항목 리스트
+    """
+    api_key = _get_api_key()
+    if not api_key:
+        return []
+
+    params = {
+        "crtfc_key": api_key,
+        "corp_code": corp_code,
+        "bsns_year": bsns_year,
+        "reprt_code": reprt_code,
+        "fs_div": fs_div,
+    }
+
+    try:
+        res = requests.get(
+            f"{DART_BASE_URL}/fnlttSinglAcntAll.json",
+            params=params,
+            timeout=10,
+        )
+        data = res.json()
+        if data.get("status") != "000":
+            return []
+        return data.get("list", [])
+    except Exception as e:
+        print(f"DART 재무제표 조회 실패: {e}")
+        return []

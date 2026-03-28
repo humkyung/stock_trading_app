@@ -21,10 +21,11 @@ from modules.scraper import (
     WATCHLIST_UPDATE_SEC,
 )
 from modules.auth_manager import AuthManager
-from modules.db import ensure_schema, get_journal_dates, save_journal, load_journal
+from modules.db import ensure_schema, get_journal_dates, save_journal, load_journal, load_watchlist
 from modules.trader import KisTrader
 from modules.portfolio import PortfolioManager
 from modules.pdf_generator import download_journal_pdf
+from modules.screener import run_screening, register_screened_stocks
 from ui.sidebar import render_sidebar
 from ui.dashboard import render_dashboard
 from ui.login_page import render_login_page
@@ -188,12 +189,13 @@ def main():
     st.title("📈 AI Stock Trading Dashboard")
 
     # [탭 구성] 기능 분리 - 관심 목록 탭 추가
-    tab_analysis, tab_portfolio, tab_journal, tab_watchlist = st.tabs(
+    tab_analysis, tab_portfolio, tab_journal, tab_watchlist, tab_screening = st.tabs(
         [
             "📊 종목 분석",
             "💰 나의 포트폴리오",
             "📝 매매 일지",
             "📌 관심 종목 목록",
+            "🔍 종목 스크리닝",
         ]
     )
 
@@ -377,6 +379,70 @@ def main():
             st.info(
                 "사이드바에서 종목 코드를 입력하고 '➕ 관심 종목 등록' 버튼을 눌러 목록에 추가해주세요."
             )
+
+    # -----------------------------------------------------
+    # TAB 5: 종목 스크리닝
+    # -----------------------------------------------------
+    with tab_screening:
+        st.header("🔍 종목 스크리닝")
+        st.caption(
+            "코스피/코스닥 전종목을 순회하며 DART 공시, 재무 턴어라운드, 기술적 지표를 분석합니다."
+        )
+
+        st.markdown(
+            """
+            **분석 기준:**
+            - 기술적 지표: RSI(과매도 회복), MACD(골든크로스), 이동평균 정배열, 볼린저밴드
+            - 재무: 영업이익 흑자전환 또는 매출/영업이익 큰 폭 증가
+            - 공시: 최근 30일 실적 관련 공시 존재 여부
+            """
+        )
+
+        if st.button("🚀 스크리닝 실행", type="primary"):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            results_container = st.empty()
+
+            def update_progress(current, total, name):
+                pct = current / total if total > 0 else 0
+                progress_bar.progress(pct)
+                status_text.text(f"분석 중: {name} ({current}/{total})")
+
+            with st.spinner("전종목 스크리닝 진행 중... (수 분 소요될 수 있습니다)"):
+                results = run_screening(progress_callback=update_progress)
+
+            progress_bar.progress(1.0)
+            status_text.text(f"스크리닝 완료! {len(results)}개 종목 발견")
+
+            if results:
+                import pandas as _pd
+
+                results_df = _pd.DataFrame(results)
+                results_df = results_df.rename(columns={
+                    "ticker": "종목코드",
+                    "name": "종목명",
+                    "market": "시장",
+                    "score": "점수",
+                    "price": "현재가",
+                    "rsi": "RSI",
+                    "revenue_growth": "매출성장(%)",
+                    "op_growth": "영업이익성장(%)",
+                    "is_turnaround": "턴어라운드",
+                    "disclosures": "공시수",
+                })
+                st.dataframe(
+                    results_df,
+                    use_container_width=True,
+                    height=400,
+                )
+
+                if st.button("📌 관심 종목에 일괄 등록"):
+                    count = register_screened_stocks(user_id, results)
+                    st.session_state[SK_WATCHLIST] = load_watchlist(user_id)
+                    st.success(f"{count}개 종목이 관심 목록에 등록되었습니다!")
+                    st.rerun()
+            else:
+                st.info("조건을 충족하는 종목이 없습니다.")
 
 
 if __name__ == "__main__":
