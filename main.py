@@ -190,7 +190,7 @@ def main():
     # [탭 구성] 기능 분리 - 관심 목록 탭 추가
     tab_analysis, tab_portfolio, tab_journal, tab_watchlist = st.tabs(
         [
-            "📊 종목 분석 & 자동매매",
+            "📊 종목 분석",
             "💰 나의 포트폴리오",
             "📝 매매 일지",
             "📌 관심 종목 목록",
@@ -217,7 +217,7 @@ def main():
 
             # 데이터가 유효하면 대시보드 그리기
             if info and not df.empty:
-                render_dashboard(df, info, news)
+                render_dashboard(df, info, news, ticker=ticker)
                 current_price = df["Close"].iloc[-1]
             else:
                 st.error("데이터를 찾을 수 없습니다. 종목 코드를 확인해주세요.")
